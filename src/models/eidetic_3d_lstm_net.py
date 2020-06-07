@@ -57,7 +57,7 @@ def rnn(images, real_input_flag, num_layers, num_hidden, configs):
 
   memory = zero_state
 
-  with tf.variable_scope('generator'):
+  with tf.compat.v1.variable_scope('generator'):
     input_list = []
     reuse = False
     for time_step in range(window_length - 1):
@@ -65,7 +65,7 @@ def rnn(images, real_input_flag, num_layers, num_hidden, configs):
           tf.zeros([batch_size, ims_width, ims_height, output_channels]))
 
     for time_step in range(total_length - 1):
-      with tf.variable_scope('e3d-lstm', reuse=reuse):
+      with tf.compat.v1.variable_scope('e3d-lstm', reuse=reuse):
         if time_step < input_length:
           input_frm = images[:, time_step]
         else:
@@ -76,7 +76,7 @@ def rnn(images, real_input_flag, num_layers, num_hidden, configs):
 
         if time_step % (window_length - window_stride) == 0:
           input_frm = tf.stack(input_list[time_step:])
-          input_frm = tf.transpose(input_frm, [1, 0, 2, 3, 4])
+          input_frm = tf.transpose(a=input_frm, perm=[1, 0, 2, 3, 4])
 
           for i in range(num_layers):
             if time_step == 0:
@@ -90,7 +90,7 @@ def rnn(images, real_input_flag, num_layers, num_hidden, configs):
             hidden[i], cell[i], memory = lstm_layer[i](
                 inputs, hidden[i], cell[i], memory, c_history[i])
 
-        x_gen = tf.layers.conv3d(hidden[num_layers - 1], output_channels,
+        x_gen = tf.compat.v1.layers.conv3d(hidden[num_layers - 1], output_channels,
                                  [window_length, 1, 1], [window_length, 1, 1],
                                  'same')
         x_gen = tf.squeeze(x_gen)
@@ -98,9 +98,9 @@ def rnn(images, real_input_flag, num_layers, num_hidden, configs):
         reuse = True
 
   gen_images = tf.stack(gen_images)
-  gen_images = tf.transpose(gen_images, [1, 0, 2, 3, 4])
+  gen_images = tf.transpose(a=gen_images, perm=[1, 0, 2, 3, 4])
   loss = tf.nn.l2_loss(gen_images - images[:, 1:])
-  loss += tf.reduce_sum(tf.abs(gen_images - images[:, 1:]))
+  loss += tf.reduce_sum(input_tensor=tf.abs(gen_images - images[:, 1:]))
 
   out_len = total_length - input_length
   out_ims = gen_images[:, -out_len:]
